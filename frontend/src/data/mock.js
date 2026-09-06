@@ -174,6 +174,26 @@ export const committee = [
   { name: 'Mr. Sankar Samanta', role: 'Secretary', tenure: 'Current' },
 ];
 
+// Full board roster shown inside the "Board Members" popup
+export const boardMembers = {
+  management: [
+    { role: 'President', name: 'Mr. Ayan Chatterjee' },
+    { role: 'Vice President', name: 'Mr. Biswajit Paul' },
+    { role: 'Secretary', name: 'Mr. Sankar Samanta' },
+    { role: 'Treasurer', name: 'Mr. Puroshottam Purohit' },
+  ],
+  advisory: [
+    { name: 'Mr. Vivekananda Pal' },
+    { name: 'Mr. Pink Das' },
+    { name: 'Mr. Subrata Barik' },
+    { name: 'Mr. Swaroop K Chattopadhyay' },
+  ],
+};
+
+// General members shown inside the "Members" popup.
+// Leave empty for now — add entries like { name: 'Full Name' } as they are finalized.
+export const generalMembers = [];
+
 // The Four Pillars of The Bengali Association Coimbatore
 export const pillars = [
   {

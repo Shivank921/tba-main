@@ -1,8 +1,28 @@
-import React from 'react';
-import { Crown, Star } from 'lucide-react';
-import { committee, testimonials } from '../data/mock';
+import React, { useState, useEffect } from 'react';
+import { Crown, Star, Users, ShieldCheck, X, UserRound } from 'lucide-react';
+import { committee, testimonials, boardMembers, generalMembers } from '../data/mock';
 
 const Committee = () => {
+  const [openModal, setOpenModal] = useState(null); // 'board' | 'members' | null
+
+  // Lock body scroll & allow Esc to close while a modal is open
+  useEffect(() => {
+    if (openModal) {
+      document.body.style.overflow = 'hidden';
+      const onKey = (e) => {
+        if (e.key === 'Escape') setOpenModal(null);
+      };
+      window.addEventListener('keydown', onKey);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', onKey);
+      };
+    }
+  }, [openModal]);
+
+  const initials = (name) =>
+    name.split(' ').filter((s) => s !== 'Mr.' && s !== 'Mrs.')[0].charAt(0);
+
   return (
     <section id="committee" className="relative py-28 bg-[#faf6ef]">
       <div className="mx-auto max-w-7xl px-6">
@@ -80,6 +100,28 @@ const Committee = () => {
           );
         })()}
 
+        {/* Directory buttons */}
+        <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={() => setOpenModal('board')}
+            data-testid="open-board-members-btn"
+            className="group inline-flex items-center gap-3 rounded-full px-8 py-4 font-display text-lg font-bold text-[#fef6e4] bg-gradient-to-br from-[#8b1a1a] to-[#b8593a] border border-[#c8862a]/40 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+          >
+            <ShieldCheck size={20} className="text-[#f5c76a]" />
+            Board Members
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpenModal('members')}
+            data-testid="open-members-btn"
+            className="group inline-flex items-center gap-3 rounded-full px-8 py-4 font-display text-lg font-bold text-[#2a1810] bg-[#fef6e4] border border-[#c8862a]/50 shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-[#faf0dc] transition-all"
+          >
+            <Users size={20} className="color-gold" />
+            Members
+          </button>
+        </div>
+
         {/* Testimonials */}
         <div className="mt-24">
           <div className="text-[11px] uppercase tracking-[0.4em] color-gold font-bold mb-4">
@@ -114,6 +156,177 @@ const Committee = () => {
           </div>
         </div>
       </div>
+
+      {/* ===== Board Members Modal ===== */}
+      {openModal === 'board' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+          data-testid="board-members-modal"
+        >
+          <div
+            className="absolute inset-0 bg-[#1a0f0a]/70 backdrop-blur-sm"
+            onClick={() => setOpenModal(null)}
+          />
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#faf6ef] border border-[#c8862a]/40 shadow-2xl animate-[fadeUp_0.3s_ease]">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] rounded-t-3xl">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#c8862a] text-[#1a0f0a] flex items-center justify-center">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-[#f5c76a] font-bold">
+                    The Board
+                  </div>
+                  <h3 className="font-display text-2xl font-bold text-[#fef6e4] leading-tight">
+                    Board Members
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(null)}
+                data-testid="close-board-modal"
+                className="w-9 h-9 rounded-full bg-[#fef6e4]/10 hover:bg-[#fef6e4]/20 text-[#fef6e4] flex items-center justify-center transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-10">
+              {/* Management Members */}
+              <div>
+                <div className="flex items-center gap-3 mb-5">
+                  <Crown size={16} className="color-gold" />
+                  <h4 className="text-[11px] uppercase tracking-[0.35em] color-gold font-bold">
+                    Management Members
+                  </h4>
+                  <div className="flex-1 h-px bg-[#c8862a]/25" />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {boardMembers.management.map((m) => (
+                    <div
+                      key={m.name}
+                      className="flex items-center gap-4 rounded-2xl bg-[#fef6e4] border border-[#c8862a]/25 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#8b1a1a] to-[#b8593a] text-[#fef6e4] flex items-center justify-center font-display text-xl font-bold">
+                        {initials(m.name)}
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.25em] color-gold font-bold mb-0.5">
+                          {m.role}
+                        </div>
+                        <div className="font-display text-lg font-bold text-[#2a1810] leading-tight">
+                          {m.name}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advisory Board Members */}
+              <div>
+                <div className="flex items-center gap-3 mb-5">
+                  <Star size={16} className="color-gold" fill="currentColor" />
+                  <h4 className="text-[11px] uppercase tracking-[0.35em] color-gold font-bold">
+                    Advisory Board Members
+                  </h4>
+                  <div className="flex-1 h-px bg-[#c8862a]/25" />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {boardMembers.advisory.map((m) => (
+                    <div
+                      key={m.name}
+                      className="flex items-center gap-4 rounded-2xl bg-[#fef6e4] border border-[#c8862a]/25 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] text-[#f5c76a] flex items-center justify-center font-display text-xl font-bold">
+                        {initials(m.name)}
+                      </div>
+                      <div className="font-display text-lg font-bold text-[#2a1810] leading-tight">
+                        {m.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Members Modal ===== */}
+      {openModal === 'members' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+          data-testid="members-modal"
+        >
+          <div
+            className="absolute inset-0 bg-[#1a0f0a]/70 backdrop-blur-sm"
+            onClick={() => setOpenModal(null)}
+          />
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-[#faf6ef] border border-[#c8862a]/40 shadow-2xl animate-[fadeUp_0.3s_ease]">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] rounded-t-3xl">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#c8862a] text-[#1a0f0a] flex items-center justify-center">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-[#f5c76a] font-bold">
+                    Our Community
+                  </div>
+                  <h3 className="font-display text-2xl font-bold text-[#fef6e4] leading-tight">
+                    Members
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(null)}
+                data-testid="close-members-modal"
+                className="w-9 h-9 rounded-full bg-[#fef6e4]/10 hover:bg-[#fef6e4]/20 text-[#fef6e4] flex items-center justify-center transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-8">
+              {generalMembers.length > 0 ? (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {generalMembers.map((m) => (
+                    <div
+                      key={m.name}
+                      className="flex items-center gap-4 rounded-2xl bg-[#fef6e4] border border-[#c8862a]/25 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#8b1a1a] to-[#b8593a] text-[#fef6e4] flex items-center justify-center font-display text-xl font-bold">
+                        {initials(m.name)}
+                      </div>
+                      <div className="font-display text-lg font-bold text-[#2a1810] leading-tight">
+                        {m.name}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-14">
+                  <div className="w-16 h-16 rounded-2xl bg-[#fef6e4] border border-[#c8862a]/30 flex items-center justify-center mb-5">
+                    <UserRound size={26} className="color-gold" />
+                  </div>
+                  <div className="font-display text-2xl font-bold text-[#2a1810] mb-2">
+                    Members list coming soon
+                  </div>
+                  <p className="font-serif-2 text-[#2a1810]/60 max-w-sm">
+                    Our members directory is being finalized and will appear here shortly.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
