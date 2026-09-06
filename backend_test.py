@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Base URL from frontend/.env
-BASE_URL = "https://assoc-cultural.preview.emergentagent.com/api"
+BASE_URL = "https://prep-changes-1.preview.emergentagent.com/api"
 
 def print_test_header(test_name):
     print(f"\n{'='*80}")
