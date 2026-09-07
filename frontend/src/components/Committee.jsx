@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, Star, Users, ShieldCheck, X, UserRound } from 'lucide-react';
-import { committee, testimonials, boardMembers, generalMembers } from '../data/mock';
+import { Crown, Star, Users, ShieldCheck, X, UserRound, Quote } from 'lucide-react';
+import { committee, testimonials, boardMembers, generalMembers, founderMessage } from '../data/mock';
 
 const Committee = () => {
   const [openModal, setOpenModal] = useState(null); // 'board' | 'members' | null
@@ -44,9 +44,22 @@ const Committee = () => {
           const Card = (m, featured) => (
             <div
               key={m.name}
+              onClick={featured ? () => setOpenModal('founder') : undefined}
+              role={featured ? 'button' : undefined}
+              tabIndex={featured ? 0 : undefined}
+              onKeyDown={
+                featured
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpenModal('founder');
+                      }
+                    }
+                  : undefined
+              }
               className={`group relative rounded-3xl p-8 border transition-all hover:-translate-y-1 ${
                 featured
-                  ? 'bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] text-[#fef6e4] border-[#c8862a]/40 shadow-xl'
+                  ? 'bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] text-[#fef6e4] border-[#c8862a]/40 shadow-xl cursor-pointer hover:shadow-2xl hover:border-[#c8862a]/70'
                   : 'bg-[#fef6e4] text-[#2a1810] border-[#c8862a]/25 hover:shadow-lg'
               }`}
               data-testid={`committee-card-${m.name.replace(/[^a-zA-Z]/g, '-').toLowerCase()}`}
@@ -64,7 +77,7 @@ const Committee = () => {
                     : 'bg-gradient-to-br from-[#8b1a1a] to-[#b8593a] text-[#fef6e4]'
                 }`}
               >
-                {m.name.split(' ').filter((s) => s !== 'Mr.' && s !== 'Mrs.')[0].charAt(0)}
+                {m.initials || m.name.split(' ').filter((s) => s !== 'Mr.' && s !== 'Mrs.')[0].charAt(0)}
               </div>
 
               <div
@@ -82,6 +95,13 @@ const Committee = () => {
               >
                 {m.tenure}
               </div>
+
+              {featured && (
+                <div className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f5c76a] group-hover:gap-3 transition-all">
+                  Read the message
+                  <span aria-hidden="true">&rarr;</span>
+                </div>
+              )}
             </div>
           );
 
@@ -156,6 +176,69 @@ const Committee = () => {
           </div>
         </div>
       </div>
+
+      {/* ===== Founder / Ex-President Message Modal ===== */}
+      {openModal === 'founder' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+          data-testid="founder-modal"
+        >
+          <div
+            className="absolute inset-0 bg-[#1a0f0a]/70 backdrop-blur-sm"
+            onClick={() => setOpenModal(null)}
+          />
+          <div className="relative w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-3xl bg-[#faf6ef] border border-[#c8862a]/40 shadow-2xl animate-[fadeUp_0.3s_ease]">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-gradient-to-br from-[#2a1810] to-[#1a0f0a] rounded-t-3xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#c8862a] text-[#1a0f0a] flex items-center justify-center font-display text-xl font-bold">
+                  FP
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-[#f5c76a] font-bold">
+                    A Few Words By Our Founding &amp; Ex-President
+                  </div>
+                  <h3 className="font-display text-2xl font-bold text-[#fef6e4] leading-tight">
+                    {committee[0].name}
+                  </h3>
+                  <div className="text-xs text-[#fef6e4]/60 mt-0.5">{committee[0].tenure}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(null)}
+                data-testid="close-founder-modal"
+                className="shrink-0 w-9 h-9 rounded-full bg-[#fef6e4]/10 hover:bg-[#fef6e4]/20 text-[#fef6e4] flex items-center justify-center transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-8 sm:p-10">
+              <Quote size={34} className="color-gold mb-5" />
+              <div className="space-y-4">
+                {founderMessage.map((para, i) => (
+                  <p
+                    key={i}
+                    className="font-serif-2 text-[17px] leading-relaxed text-[#2a1810]/80"
+                  >
+                    {para}
+                  </p>
+                ))}
+              </div>
+              <div className="mt-8 pt-6 border-t border-[#c8862a]/20">
+                <div className="font-display text-xl font-bold text-[#2a1810]">
+                  {committee[0].name}
+                </div>
+                <div className="text-xs color-gold uppercase tracking-[0.2em] font-semibold mt-1">
+                  Founding &amp; Ex-President
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== Board Members Modal ===== */}
       {openModal === 'board' && (

@@ -168,10 +168,37 @@ export const luminaries = [
 ];
 
 export const committee = [
-  { name: 'Mr. Anutosh Guha, IFS', role: 'Founding & Ex-President', tenure: '2002' },
+  { name: 'Mr. J. Dasgupta', role: 'A Few Words By Our Founding & Ex-President', tenure: '1993', initials: 'FP' },
   { name: 'Mr. Ayan Chatterjee', role: 'President', tenure: 'Current' },
   { name: 'Mr. Biswajit Paul', role: 'Vice President', tenure: 'Current' },
   { name: 'Mr. Sankar Samanta', role: 'Secretary', tenure: 'Current' },
+];
+
+// Message shown in the founder popup (opens when the Ex-President card is clicked)
+export const founderMessage = [
+  'The Bengali Association was formed, first informally and and subsequently as a big one as we see it today.',
+  'A small Bengali community started the Durga Puja in 1992 on a small scale with the Pujo being held in Priya Kunj.',
+  'It was the year I was transferred to Coimbatore and hence had the opportunity of joining the festive celebrations.',
+  'There was no formal committee in 1992.',
+  'In 1993, the Bengali association was formally formed and the Constitution was framed.',
+  'I was privileged to head the newly formed association as the President and as a senior founder of the association, I continued to hold the post till 1996.',
+  'Many of the organisers have since passed on and some have left Coimbatore and settled down elsewhere.',
+  'By then the population of Bengalis had increased substantially.',
+  'Some young and energetic people had also joined the association and I was now comfortable in handing over the baton to the next in line.',
+  'The main agenda of the Association were Durga Puja and Lakshmi Puja.',
+  'During those days all the members and their families used to participate in the celebrations and organise several cultural activities.',
+  'The only drawback was that despite hosting the Pujo every year, we were unable to fix a permanent location for our Durga Puja.',
+  'The Pujo continued to move locations with each passing year.',
+  'Despite these shifts the members and their families loyally attended the celebrations every year.',
+  'It was like a family getting together to celebrate the homecoming of their daughter Ma Durga and rejoicing in the festivities.',
+  'From organising all 3 meals at the mantap to performing cultural programs on stage, the 5 days of Durga Puja were an example of unity and togetherness.',
+  'Cultural activities were a daily affair with our in house women and children drama group performing with great passion and enthusiasm.',
+  'Sometime in between a section of the members decided to separate themselves by forming another association.',
+  'For getting the original name of the association, they went in for a long drawn litigation.',
+  'This continued for years together after which the court decreed to the formation and naming of the 2 associations as they exist today.',
+  'Many young members now came forward and fixed up SNV KALYANA MANDAPAM on a rental basis for performing the seasonal festivals. Rest of what has been happening now is well known to all the present members.',
+  'I wish the association all success in their future progressive activities.',
+  'May Goddess Durga bless us all...',
 ];
 
 // Full board roster shown inside the "Board Members" popup
