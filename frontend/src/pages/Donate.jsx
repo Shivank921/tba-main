@@ -63,7 +63,7 @@ export default function Donate() {
               className="max-w-2xl font-display text-4xl font-bold leading-[1.08] sm:text-5xl lg:text-6xl"
               data-testid="donation-heading"
             >
-              A small act. A stronger community.
+              A small act... <br />A stronger community!
             </h1>
             <p
               className="mt-6 max-w-xl font-serif-2 text-xl leading-relaxed text-[#fef6e4]/78 sm:text-2xl"

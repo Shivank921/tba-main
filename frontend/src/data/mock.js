@@ -63,7 +63,7 @@ export const events = [
     id: 2,
     date: 'Oct 17',
     day: 'Saturday',
-    title: 'Maha Saptami',
+    title: 'Maha Saptami · Day 1',
     sessions: [
       { time: '9:29 AM', name: 'Saptami Puja', note: 'Kola Bou snan & sthapan' },
       { time: '12:00 PM', name: 'Pushpanjali', note: 'Floral offering' },
@@ -76,7 +76,7 @@ export const events = [
     id: 3,
     date: 'Oct 18',
     day: 'Sunday',
-    title: 'Saptami · Day 2',
+    title: 'Maha Saptami · Day 2',
     sessions: [
       { time: '12:00 PM', name: 'Pushpanjali', note: 'Floral offering' },
       { time: '12:30 PM', name: 'Bhog Arati', note: 'Community bhog' },
@@ -184,7 +184,7 @@ export const boardMembers = {
   ],
   advisory: [
     { name: 'Mr. Vivekananda Pal' },
-    { name: 'Mr. Pink Das' },
+    { name: 'Mr. Pinku Das' },
     { name: 'Mr. Subrata Barik' },
     { name: 'Mr. Swaroop K Chattopadhyay' },
   ],
