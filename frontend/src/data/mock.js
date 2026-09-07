@@ -78,8 +78,9 @@ export const events = [
     day: 'Sunday',
     title: 'Maha Saptami · Day 2',
     sessions: [
-      { time: '12:00 PM', name: 'Pushpanjali', note: 'Floral offering' },
-      { time: '12:30 PM', name: 'Bhog Arati', note: 'Community bhog' },
+      { time: '5:43 AM – 10:00 AM', name: 'Puja', note: 'Morning worship' },
+      { time: '11:00 AM', name: 'Pushpanjali', note: 'Floral offering' },
+      { time: '12:00 PM', name: 'Bhog Arati', note: 'Community bhog' },
       { time: '8:00 PM', name: 'Sandhya Arati', note: 'Cultural function' },
     ],
     accent: 'gold',
