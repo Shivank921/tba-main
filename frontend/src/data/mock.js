@@ -377,6 +377,7 @@ export const contact = {
   phones: [
     { name: 'Mr. Ayan Chatterjee', number: '+91-9894280001' },
     { name: 'Mr. Shankar Samanta', number: '+91-7667559217' },
+    { name: 'Mr. Subrata Barik', number: '+91-9842208444' },
   ],
   socials: [
     { name: 'Facebook', href: 'https://www.facebook.com/tbacbe/' },
