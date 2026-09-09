@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -269,6 +270,187 @@ async def admin_stats(admin: dict = Depends(require_admin)):
     }
 
 
+# ============================================================
+# Gallery Management (Frames of Devotion)
+# ============================================================
+UPLOAD_DIR = ROOT_DIR / 'uploads'
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'}
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB per photo
+
+GALLERY_SEED = [
+    {
+        'id': 'puja',
+        'title': 'Puja',
+        'blurb': 'Durga Puja, Saraswati Puja & sacred rituals.',
+        'cover': '/durga-puja-dhunuchi.webp',
+        'photos': [
+            '/gallery/puja/puja-1.jpeg',
+            '/gallery/puja/puja-2.jpeg',
+            '/gallery/puja/puja-3.jpeg',
+            '/gallery/puja/puja-4.jpeg',
+            '/gallery/puja/puja-5.jpeg',
+        ],
+    },
+    {
+        'id': 'programs',
+        'title': 'Programs',
+        'blurb': 'Cultural nights, music, dance & performances.',
+        'cover': '/cultural-sangeet.jpeg',
+        'photos': [
+            '/gallery/programs/prog-1.webp',
+            '/gallery/programs/prog-2.webp',
+            '/gallery/programs/prog-3.jpg',
+            '/gallery/programs/prog-4.webp',
+            '/gallery/programs/prog-5.jpeg',
+        ],
+    },
+    {
+        'id': 'activities',
+        'title': 'Activities',
+        'blurb': 'Community service, sports & get-togethers.',
+        'cover': '/events-football.webp',
+        'photos': [
+            '/gallery/activities/act-1.jpeg',
+            '/gallery/activities/act-2.jpg',
+            '/gallery/activities/act-3.jpg',
+            '/gallery/activities/act-4.jpg',
+            '/gallery/activities/act-5.jpg',
+        ],
+    },
+    {
+        'id': 'news-media',
+        'title': 'News & Media',
+        'blurb': 'Press coverage, features & recognitions.',
+        'cover': '/community-group.webp',
+        'photos': [
+            '/gallery/news/news-1.jpg',
+            '/gallery/news/news-2.webp',
+            '/gallery/news/news-3.jpg',
+            '/gallery/news/news-4.webp',
+            '/gallery/news/news-5.jpg',
+        ],
+    },
+]
+GALLERY_ALBUM_ORDER = [a['id'] for a in GALLERY_SEED]
+
+
+def _photo(url: str, stored_file: Optional[str] = None) -> dict:
+    return {
+        'id': str(uuid.uuid4()),
+        'url': url,
+        'file': stored_file,  # server-side filename for uploaded photos
+        'created_at': datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def _get_album(album_id: str) -> dict:
+    doc = await db.gallery_albums.find_one({'id': album_id}, {'_id': 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Album not found')
+    return doc
+
+
+@api_router.get('/gallery')
+async def list_gallery():
+    """Public — all albums with photos in display order."""
+    albums = await db.gallery_albums.find({}, {'_id': 0}).to_list(100)
+    order = {a: i for i, a in enumerate(GALLERY_ALBUM_ORDER)}
+    albums.sort(key=lambda a: order.get(a['id'], 99))
+    return albums
+
+
+@api_router.get('/uploads/{filename}')
+async def serve_upload(filename: str):
+    """Serve admin-uploaded gallery photos."""
+    safe = os.path.basename(filename)
+    path = UPLOAD_DIR / safe
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail='File not found')
+    return FileResponse(path)
+
+
+@api_router.post('/gallery/albums/{album_id}/photos', status_code=201)
+async def upload_gallery_photo(album_id: str, file: UploadFile = File(...), admin: dict = Depends(require_admin)):
+    _ = admin
+    album = await _get_album(album_id)
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail='Only image files are allowed')
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail='Photo exceeds the 15 MB limit')
+
+    ext = os.path.splitext(file.filename or '')[1].lower() or '.jpg'
+    stored = f'{album_id}-{uuid.uuid4().hex}{ext}'
+    (UPLOAD_DIR / stored).write_bytes(data)
+
+    photo = _photo(f'/api/uploads/{stored}', stored_file=stored)
+    await db.gallery_albums.update_one({'id': album_id}, {'$push': {'photos': photo}})
+    logger.info('Gallery photo added to %s: %s', album_id, stored)
+    return photo
+
+
+@api_router.delete('/gallery/albums/{album_id}/photos/{photo_id}')
+async def delete_gallery_photo(album_id: str, photo_id: str, admin: dict = Depends(require_admin)):
+    _ = admin
+    album = await _get_album(album_id)
+    target = next((p for p in album['photos'] if p['id'] == photo_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail='Photo not found')
+
+    updates = {'$pull': {'photos': {'id': photo_id}}}
+    await db.gallery_albums.update_one({'id': album_id}, updates)
+
+    # If the removed photo was the cover, fall back to the next photo or the album default
+    if album.get('cover_photo_id') == photo_id or album.get('cover') == target['url']:
+        remaining = [p for p in album['photos'] if p['id'] != photo_id]
+        new_cover = remaining[0]['url'] if remaining else ''
+        await db.gallery_albums.update_one(
+            {'id': album_id}, {'$set': {'cover': new_cover, 'cover_photo_id': remaining[0]['id'] if remaining else None}}
+        )
+
+    # Delete the uploaded file from disk (legacy static photos have file=None)
+    if target.get('file'):
+        f = UPLOAD_DIR / target['file']
+        if f.is_file():
+            f.unlink()
+    return {'ok': True, 'deleted': photo_id}
+
+
+class OrderPayload(BaseModel):
+    photo_ids: List[str]
+
+
+@api_router.put('/gallery/albums/{album_id}/order')
+async def reorder_gallery(album_id: str, payload: OrderPayload, admin: dict = Depends(require_admin)):
+    _ = admin
+    album = await _get_album(album_id)
+    by_id = {p['id']: p for p in album['photos']}
+    new_order = [by_id[pid] for pid in payload.photo_ids if pid in by_id]
+    # keep any photos missing from payload at the end (safety)
+    new_order += [p for p in album['photos'] if p['id'] not in set(payload.photo_ids)]
+    await db.gallery_albums.update_one({'id': album_id}, {'$set': {'photos': new_order}})
+    return {'ok': True, 'count': len(new_order)}
+
+
+class CoverPayload(BaseModel):
+    photo_id: str
+
+
+@api_router.patch('/gallery/albums/{album_id}/cover')
+async def set_gallery_cover(album_id: str, payload: CoverPayload, admin: dict = Depends(require_admin)):
+    _ = admin
+    album = await _get_album(album_id)
+    target = next((p for p in album['photos'] if p['id'] == payload.photo_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail='Photo not found')
+    await db.gallery_albums.update_one(
+        {'id': album_id}, {'$set': {'cover': target['url'], 'cover_photo_id': payload.photo_id}}
+    )
+    return {'ok': True, 'cover': target['url']}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -298,6 +480,26 @@ async def seed_admin():
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         logger.info("Seeded default admin user '%s'", ADMIN_USERNAME.lower())
+
+
+@app.on_event("startup")
+async def seed_gallery():
+    """Seed the 4 gallery albums once (keeps existing data on later boots)."""
+    count = await db.gallery_albums.count_documents({})
+    if count > 0:
+        return
+    for a in GALLERY_SEED:
+        photos = [_photo(url) for url in a['photos']]
+        await db.gallery_albums.insert_one({
+            'id': a['id'],
+            'title': a['title'],
+            'blurb': a['blurb'],
+            'cover': a['cover'],
+            'cover_photo_id': None,
+            'photos': photos,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+        })
+    logger.info("Seeded %d gallery albums", len(GALLERY_SEED))
 
 
 @app.on_event("shutdown")

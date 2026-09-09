@@ -267,3 +267,104 @@ agent_communication:
     -comment: "Please test the admin endpoints. Default credentials: username=admin password=BangaliCoimbatore@2026. Verify: (1) login returns access_token, (2) wrong password returns 401, (3) /api/contact and /api/newsletter GET now require Bearer token (401 without), (4) PATCH /api/contact/{id} toggles handled and requires auth, (5) /api/admin/stats returns correct counts."
     -agent: "testing"
     -comment: "✅ BACKEND TESTING COMPLETE - ALL ADMIN/AUTH TESTS PASSED (26/26 total). Admin authentication fully functional: (1) POST /api/admin/login correctly validates credentials (admin/BangaliCoimbatore@2026), returns JWT token with proper structure, rejects wrong password/unknown username with 401, validates required fields with 422; (2) GET /api/admin/me requires Bearer token, returns username and role correctly; (3) GET /api/admin/stats requires token, returns all counts (total_inquiries, pending_inquiries, handled_inquiries, total_subscribers) as integers; (4) GET /api/contact and /api/newsletter now properly protected (401 without token, 200 with valid token); (5) PATCH /api/contact/{id} requires token, toggles handled field correctly, returns 404 for non-existent IDs, stats update correctly after marking handled. Public POST endpoints (/api/contact, /api/newsletter) remain accessible without auth. No issues found - all backend functionality working as expected."
+
+
+# ============ Update: Admin Gallery Manager (Frames of Devotion) ============
+backend:
+  - task: "GET /api/gallery - Public album list"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "New public endpoint returning all gallery albums (puja, programs, activities, news-media) with photos in stored order. Albums seeded on startup from the previous static mock data (5 photos each, legacy static URLs)."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. Verified: (1) Public endpoint (no auth required) returns 200; (2) Returns exactly 4 albums in correct order: puja, programs, activities, news-media; (3) Each album has correct structure: id, title, blurb, cover, cover_photo_id, photos array; (4) Each album has exactly 5 seeded photos; (5) Photo structure correct: id, url, file, created_at; (6) No MongoDB _id exposed in response."
+  - task: "POST /api/gallery/albums/{id}/photos - Upload photo (admin)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Multipart upload, JWT-protected. Validates image content-type, 15MB limit. Stores file in /app/backend/uploads, photo record {id, url: /api/uploads/<file>, file, created_at} pushed to album. GET /api/uploads/{filename} serves the files (public)."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. Verified: (1) Without JWT returns 401 (auth required); (2) With valid JWT + image file returns 201 with photo object containing id, url (starts with /api/uploads/), file, created_at; (3) Uploaded file is served publicly via GET /api/uploads/{filename} (returns 200 with image bytes); (4) Uploading non-image file (.txt) returns 400 with 'Only image files are allowed'; (5) Uploading file >15MB returns 400 with 'Photo exceeds the 15 MB limit'. All validation working correctly."
+  - task: "DELETE /api/gallery/albums/{album}/photos/{photo} - Remove photo (admin)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Removes photo record; deletes uploaded file from disk (legacy static photos only remove the record). If removed photo was the cover, cover falls back to the next photo."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. Verified: (1) DELETE with JWT returns 200 with {ok: true, deleted: photo_id}; (2) Photo removed from album (GET /api/gallery shows it gone); (3) Uploaded file deleted from disk (GET /api/uploads/{filename} returns 404); (4) When deleted photo was the cover, cover correctly falls back to first remaining photo (cover and cover_photo_id updated); (5) Invalid photo ID returns 404 with 'Photo not found'. Cover fallback mechanism working as designed."
+  - task: "PUT /api/gallery/albums/{id}/order + PATCH .../cover - Reorder & set cover (admin)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "PUT order takes {photo_ids: [...]} and reorders album photos (unknown ids ignored, missing ids appended). PATCH cover takes {photo_id} and sets album cover + cover_photo_id. Both JWT-protected. Manually verified via curl: upload/serve/cover/reorder/delete all working."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. Verified: (1) PATCH /api/gallery/albums/puja/cover with JWT + {photo_id} returns 200 with {ok: true, cover: url}; (2) GET /api/gallery reflects updated cover and cover_photo_id; (3) PUT /api/gallery/albums/puja/order with JWT + {photo_ids: [...]} returns 200 with {ok: true, count: n}; (4) GET /api/gallery shows new photo order; (5) Partial photo_ids list preserves all photos (missing IDs appended at end); (6) Invalid album ID returns 404 for all operations; (7) Invalid photo ID returns 404 for cover/delete. All edge cases handled correctly."
+
+frontend:
+  - task: "Admin Gallery tab - manage albums/photos"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Admin.jsx, /app/frontend/src/components/admin/GalleryManager.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "New 'Gallery' tab in admin dashboard. Album selector chips with photo counts, photo grid with #order badges, move left/right, set-cover star, delete with confirm, multi-file upload with progress (Uploading n/m), 15MB client-side guard."
+  - task: "Public Gallery reads live data from /api/gallery"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Gallery.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Frames of Devotion section now fetches albums from GET /api/gallery, resolving /api/uploads URLs via REACT_APP_BACKEND_URL. Falls back to static mock data if API unavailable."
+
+metadata:
+  version: "1.4"
+  test_sequence: 4
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    -agent: "main"
+    -comment: "Please test the new gallery endpoints in /app/backend/server.py. Admin credentials: username=admin password=admin123 (see /app/memory/test_credentials.md). Verify: (1) GET /api/gallery is public and returns 4 albums in fixed order with 5 seeded photos each; (2) upload requires JWT (401 without), accepts image/* up to 15MB, rejects non-images, and the uploaded file is served via GET /api/uploads/{filename}; (3) PUT order reorders photos and tolerates partial lists; (4) PATCH cover sets cover + cover_photo_id; (5) DELETE removes photo, deletes uploaded file from disk, and cover falls back when the cover photo is deleted. Use REACT_APP_BACKEND_URL from /app/frontend/.env with /api prefix."
+    -agent: "testing"
+    -comment: "✅ BACKEND TESTING COMPLETE - ALL GALLERY TESTS PASSED (13/13). Gallery Management fully functional: (1) GET /api/gallery (PUBLIC) returns 200 with exactly 4 albums (puja, programs, activities, news-media) in correct order, each with 5 photos, proper structure (id/title/blurb/cover/cover_photo_id/photos), no _id exposed; (2) POST /api/gallery/albums/puja/photos requires JWT (401 without), accepts valid images (returns 201 with photo object, url starts with /api/uploads/), validates content-type (400 for non-images), enforces 15MB limit (400 for larger files); (3) GET /api/uploads/{filename} serves uploaded files publicly (200 with image bytes); (4) PATCH /api/gallery/albums/puja/cover sets cover photo correctly (200, updates cover and cover_photo_id in GET response); (5) PUT /api/gallery/albums/puja/order reorders photos (200), handles partial lists correctly (missing IDs appended); (6) DELETE /api/gallery/albums/puja/photos/{id} removes photo (200), deletes file from disk (404 on subsequent GET), cover falls back to first remaining photo when cover deleted; (7) Invalid album IDs return 404 for upload/delete/order/cover; (8) Invalid photo IDs return 404 for delete/cover. All validation, authentication, file handling, and edge cases working correctly. Puja album restored to original 5 seeded photos after cleanup."

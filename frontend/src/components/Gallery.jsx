@@ -1,12 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ImageIcon, ArrowLeft } from 'lucide-react';
-import { galleryAlbums } from '../data/mock';
+import { galleryAlbums as fallbackAlbums } from '../data/mock';
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 
 const Gallery = () => {
+  const [albums, setAlbums] = useState(fallbackAlbums);
   const [openId, setOpenId] = useState(null);
   const [lightbox, setLightbox] = useState(null);
 
-  const album = galleryAlbums.find((a) => a.id === openId);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${BACKEND}/api/gallery`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data) || data.length === 0) return;
+        // Normalize API albums to the shape this component renders
+        setAlbums(
+          data.map((a) => ({
+            id: a.id,
+            title: a.title,
+            blurb: a.blurb,
+            cover: resolveSrc(a.cover),
+            photos: (a.photos || []).map((p) => resolveSrc(p.url)),
+          }))
+        );
+      })
+      .catch(() => {
+        /* keep static fallback */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const album = albums.find((a) => a.id === openId);
 
   return (
     <section id="gallery" className="relative py-28 bg-[#fef6e4] overflow-hidden">
@@ -25,7 +54,7 @@ const Gallery = () => {
 
         {/* Album preview cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {galleryAlbums.map((a) => (
+          {albums.map((a) => (
             <button
               key={a.id}
               onClick={() => setOpenId(a.id)}

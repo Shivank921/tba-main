@@ -15,9 +15,11 @@ import {
   ClipboardCheck,
   ArrowLeft,
   Copy,
+  Images,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import GalleryManager from '../components/admin/GalleryManager';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -74,7 +76,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (user) loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user]);
 
   const filteredInquiries = useMemo(() => {
@@ -256,6 +258,17 @@ const Admin = () => {
             >
               <Users size={14} /> Subscribers
             </button>
+            <button
+              onClick={() => setTab('gallery')}
+              data-testid="admin-tab-gallery"
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                tab === 'gallery'
+                  ? 'bg-[#8b1a1a] text-[#fef6e4] shadow'
+                  : 'text-[#2a1810] hover:bg-[#faf6ef]'
+              }`}
+            >
+              <Images size={14} /> Gallery
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -276,23 +289,33 @@ const Admin = () => {
                 ))}
               </div>
             )}
-            <div className="relative">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2a1810]/40"
-              />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search . . ."
-                className="rounded-full pl-9 pr-4 py-2 text-sm bg-white border border-[#c8862a]/25 focus:outline-none focus:border-[#8b1a1a] w-56"
-              />
-            </div>
+            {tab !== 'gallery' && (
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2a1810]/40"
+                />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search . . ."
+                  className="rounded-full pl-9 pr-4 py-2 text-sm bg-white border border-[#c8862a]/25 focus:outline-none focus:border-[#8b1a1a] w-56"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Content */}
-        {busy ? (
+        {tab === 'gallery' ? (
+          <GalleryManager
+            authHeader={authHeader}
+            onUnauthorized={() => {
+              toast.error('Session expired, please sign in again.');
+              logout();
+            }}
+          />
+        ) : busy ? (
           <div className="flex items-center justify-center py-24 text-[#2a1810]/60">
             <Loader2 className="animate-spin mr-2" size={18} /> Loading . . .
           </div>
