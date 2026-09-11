@@ -132,7 +132,7 @@ const Footer = () => {
 
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-xs text-[#fef6e4]/50">
-            © {new Date().getFullYear()} The Bengali Association — Coimbatore. Made with <Heart size={12} className="inline color-crimson" fill="currentColor" /> for our community.
+            © {new Date().getFullYear()} The Bengali Association — Coimbatore. Made with <Heart size={12} className="inline color-crimson" fill="currentColor" /> by Shivank Chakraborty for the community.
           </div>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
