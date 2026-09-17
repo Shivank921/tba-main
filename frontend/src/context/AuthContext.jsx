@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
@@ -39,27 +39,32 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token]);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     const { data } = await axios.post(`${API}/admin/login`, { username, password });
     localStorage.setItem('admin_token', data.access_token);
     setToken(data.access_token);
     setUser({ username: data.username, role: 'admin' });
     return data;
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('admin_token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
-  const authHeader = () => (token ? { Authorization: `Bearer ${token}` } : {});
-
-  return (
-    <AuthContext.Provider value={{ token, user, loading, login, logout, authHeader }}>
-      {children}
-    </AuthContext.Provider>
+  // Stable per-token identity so consumers can safely use it as an effect dependency.
+  const authHeader = useCallback(
+    () => (token ? { Authorization: `Bearer ${token}` } : {}),
+    [token]
   );
+
+  const value = useMemo(
+    () => ({ token, user, loading, login, logout, authHeader }),
+    [token, user, loading, login, logout, authHeader]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

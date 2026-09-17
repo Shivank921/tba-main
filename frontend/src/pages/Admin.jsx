@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -51,7 +51,7 @@ const Admin = () => {
   const [filter, setFilter] = useState('all'); // all | pending | handled
   const [updating, setUpdating] = useState({});
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setBusy(true);
     try {
       const [c, s, st] = await Promise.all([
@@ -72,12 +72,11 @@ const Admin = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, [authHeader, logout]);
 
   useEffect(() => {
     if (user) loadAll();
-     
-  }, [user]);
+  }, [user, loadAll]);
 
   const filteredInquiries = useMemo(() => {
     let items = inquiries;
