@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ImageIcon, ArrowLeft } from 'lucide-react';
 import { galleryAlbums as fallbackAlbums } from '../data/mock';
 
-const BACKEND = process.env.REACT_APP_BACKEND_URL;
+const BACKEND = process.env.REACT_APP_BACKEND_URL || '';
 const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${BACKEND}${u}` : u);
 
 const Gallery = () => {

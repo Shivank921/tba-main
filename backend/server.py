@@ -274,7 +274,12 @@ async def admin_stats(admin: dict = Depends(require_admin)):
 # Gallery Management (Frames of Devotion)
 # ============================================================
 UPLOAD_DIR = ROOT_DIR / 'uploads'
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # Read-only filesystem (e.g. Vercel serverless) — use ephemeral /tmp storage
+    UPLOAD_DIR = Path('/tmp/uploads')
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'}
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB per photo
 

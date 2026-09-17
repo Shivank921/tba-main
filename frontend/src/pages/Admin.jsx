@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import GalleryManager from '../components/admin/GalleryManager';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 
 const formatDate = (iso) => {
   try {

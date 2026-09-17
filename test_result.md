@@ -366,5 +366,41 @@ test_plan:
 agent_communication:
     -agent: "main"
     -comment: "Please test the new gallery endpoints in /app/backend/server.py. Admin credentials: username=admin password=admin123 (see /app/memory/test_credentials.md). Verify: (1) GET /api/gallery is public and returns 4 albums in fixed order with 5 seeded photos each; (2) upload requires JWT (401 without), accepts image/* up to 15MB, rejects non-images, and the uploaded file is served via GET /api/uploads/{filename}; (3) PUT order reorders photos and tolerates partial lists; (4) PATCH cover sets cover + cover_photo_id; (5) DELETE removes photo, deletes uploaded file from disk, and cover falls back when the cover photo is deleted. Use REACT_APP_BACKEND_URL from /app/frontend/.env with /api prefix."
+
+# ============ Update: Vercel full-stack deployment prep ============
+backend:
+  - task: "UPLOAD_DIR read-only filesystem fallback (Vercel compat)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "UPLOAD_DIR.mkdir wrapped in try/except OSError — falls back to /tmp/uploads on read-only filesystems (Vercel serverless). Locally still /app/backend/uploads. Also added Vercel entry /app/api/index.py (imports app from backend/server.py), slim root /app/requirements.txt for the Python runtime, and /app/vercel.json (static-build frontend + python function, /api/* routed to function, SPA fallback). Frontend: all REACT_APP_BACKEND_URL usages now default to same-origin ('' fallback) so Vercel needs no frontend env var."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ ALL REGRESSION TESTS PASSED (7/7). Verified: (1) GET /api/ returns 200 with {message: 'Hello World'}; (2) GET /api/gallery (PUBLIC) returns 200 with exactly 4 albums (puja, programs, activities, news-media) in correct order, each with exactly 5 seeded photos; (3) POST /api/admin/login with admin/admin123 returns 200 with valid JWT token; (4) POST /api/gallery/albums/programs/photos with JWT uploads image successfully (201), returns photo object with url starting with /api/uploads/, and CRITICALLY file is written to /app/backend/uploads (NOT /tmp/uploads) - verified on disk; (5) GET /api/uploads/{filename} serves uploaded file (200, 85 bytes); (6) DELETE /api/gallery/albums/programs/photos/{id} removes photo (200), and file is deleted from /app/backend/uploads - verified on disk; (7) Programs album restored to exactly 5 original seeded photos. CRITICAL VERIFICATION: Files are correctly written to /app/backend/uploads locally (NOT /tmp/uploads). The try/except OSError change did NOT break local operation. All existing functionality working correctly."
+
+frontend: []
+
+metadata:
+  version: "1.5"
+  test_sequence: 6
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    -agent: "main"
+    -comment: "Regression check after Vercel prep: verify existing endpoints still work — GET /api/ health, GET /api/gallery (4 albums, 5 photos each), admin login (admin/admin123), one photo upload to an album then delete it (confirm file written to /app/backend/uploads and removed on delete). The only backend change is a try/except around UPLOAD_DIR.mkdir with /tmp fallback; new files /app/api/index.py, /app/requirements.txt, /app/vercel.json must not affect local operation."
     -agent: "testing"
     -comment: "✅ BACKEND TESTING COMPLETE - ALL GALLERY TESTS PASSED (13/13). Gallery Management fully functional: (1) GET /api/gallery (PUBLIC) returns 200 with exactly 4 albums (puja, programs, activities, news-media) in correct order, each with 5 photos, proper structure (id/title/blurb/cover/cover_photo_id/photos), no _id exposed; (2) POST /api/gallery/albums/puja/photos requires JWT (401 without), accepts valid images (returns 201 with photo object, url starts with /api/uploads/), validates content-type (400 for non-images), enforces 15MB limit (400 for larger files); (3) GET /api/uploads/{filename} serves uploaded files publicly (200 with image bytes); (4) PATCH /api/gallery/albums/puja/cover sets cover photo correctly (200, updates cover and cover_photo_id in GET response); (5) PUT /api/gallery/albums/puja/order reorders photos (200), handles partial lists correctly (missing IDs appended); (6) DELETE /api/gallery/albums/puja/photos/{id} removes photo (200), deletes file from disk (404 on subsequent GET), cover falls back to first remaining photo when cover deleted; (7) Invalid album IDs return 404 for upload/delete/order/cover; (8) Invalid photo IDs return 404 for delete/cover. All validation, authentication, file handling, and edge cases working correctly. Puja album restored to original 5 seeded photos after cleanup."
+    -agent: "testing"
+    -comment: "✅ REGRESSION TEST COMPLETE - ALL TESTS PASSED (7/7). Verified after Vercel deployment prep changes: (1) GET /api/ health check working (200, Hello World); (2) GET /api/gallery returns 4 albums with 5 photos each (PUBLIC); (3) Admin login with admin/admin123 returns valid JWT; (4) Photo upload to programs album works (201), file written to /app/backend/uploads (NOT /tmp/uploads) - VERIFIED ON DISK; (5) Uploaded file served via GET /api/uploads/{filename} (200); (6) Photo delete works (200), file removed from /app/backend/uploads - VERIFIED ON DISK; (7) Programs album restored to 5 original seeded photos. CRITICAL: The try/except OSError change around UPLOAD_DIR.mkdir did NOT break local operation - files are correctly written to /app/backend/uploads locally. No regression detected. All backend functionality working as expected."

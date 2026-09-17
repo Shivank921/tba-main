@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { navLinks } from '../data/mock';
 import { Link, useLocation } from 'react-router-dom';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 
 const Footer = () => {
   const [subLoading, setSubLoading] = useState(false);

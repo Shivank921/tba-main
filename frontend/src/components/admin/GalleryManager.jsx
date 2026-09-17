@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u);
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
+const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${process.env.REACT_APP_BACKEND_URL || ''}${u}` : u);
 const MAX_BYTES = 15 * 1024 * 1024;
 
 const GalleryManager = ({ authHeader, onUnauthorized }) => {

@@ -4,7 +4,7 @@ import { MapPin, Mail, Phone, Send, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { contact } from '../data/mock';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
