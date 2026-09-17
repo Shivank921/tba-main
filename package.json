@@ -1,0 +1,7 @@
+{
+  "name": "tba-main",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  }
+}

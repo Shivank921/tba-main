@@ -425,8 +425,8 @@ frontend:
         -comment: "✅ ALL VERIFICATION CHECKS PASSED (4/4). CAUSATION CHECK: Copied package.json alone to /tmp/test_without_npmrc, ran npm install --dry-run → FAILED with exact ERESOLVE error 'peer date-fns@^2.28.0 || ^3.0.0 from react-day-picker@8.10.1' (reproduces user's Vercel error). FIX CHECK: Copied package.json + .npmrc to /tmp/test_with_npmrc, ran npm install --dry-run → SUCCEEDED (exit 0, added 1486 packages, no ERESOLVE error). NO-REGRESSION CHECK: (1) Frontend service RUNNING (pid 942, uptime 0:21:23); (2) Frontend logs show 'webpack compiled with 1 warning' (compiling successfully); (3) /app/frontend/yarn.lock exists (537K, needed for Vercel to prefer yarn). BONUS: yarn build completed successfully in 17.48s with only minor eslint warning (react-hooks/exhaustive-deps). Fix verified - .npmrc with legacy-peer-deps=true resolves the Vercel npm install failure."
 
 metadata:
-  version: "1.6"
-  test_sequence: 7
+  version: "1.7"
+  test_sequence: 8
   run_ui: false
 
 test_plan:
@@ -440,3 +440,27 @@ agent_communication:
     -comment: "User-reported Vercel build failure (ERESOLVE). Fix applied: /app/frontend/.npmrc with legacy-peer-deps=true. Please verify: (1) sandbox npm install --dry-run with package.json+.npmrc succeeds; (2) without .npmrc it fails with ERESOLVE (proving causation); (3) the running frontend still compiles after the change (check supervisor logs)."
     -agent: "testing"
     -comment: "✅ VERCEL BUILD FIX VERIFIED - ALL CHECKS PASSED (4/4). CAUSATION: npm install --dry-run WITHOUT .npmrc reproduces exact ERESOLVE error (date-fns@4.1.0 vs react-day-picker peer dep ^2.28.0 || ^3.0.0). FIX: npm install --dry-run WITH .npmrc succeeds (exit 0, 1486 packages). NO-REGRESSION: Frontend service RUNNING, webpack compiling successfully, yarn.lock exists (537K). BONUS: yarn build completes in 17.48s. The .npmrc fix is confirmed working - Vercel npm builds will now succeed with legacy-peer-deps=true."
+    -agent: "main"
+    -comment: "Bug Fix 2: After ERESOLVE fix, Vercel build progressed but failed at 'npm run build' with 'Cannot find module ajv/dist/compile/codegen'. Applied fix in /app/frontend/package.json: devDependencies.ajv ^8.17.1 (forces root ajv v8), overrides for ajv-keywords@^3.5.2 and schema-utils@^3.0.0 to nest ajv ^6.12.6 (dual-version strategy), engines.node 20.x. Also added root /app/package.json with engines.node 20.x for Vercel. Please verify: (1) FRESH simulation in /tmp/verify-sim with npm install + npm run build (both must succeed); (2) root ajv is v8.x; (3) ajv-keywords doesn't throw MODULE_NOT_FOUND; (4) yarn build still works in /app/frontend; (5) frontend service still running."
+    -agent: "testing"
+    -comment: "✅ VERCEL AJV BUILD FIX VERIFIED - ALL CHECKS PASSED (7/7). Created fresh /tmp/verify-sim simulation copying all necessary files from /app/frontend. CRITICAL VERIFICATIONS: (1) npm install SUCCEEDED (exit 0, 1491 packages in 45s) - no ERESOLVE or module errors; (2) Root ajv version 8.20.0 (8.x ✓); (3) node -e require ajv-keywords/dist/definitions/typeof.js did NOT throw MODULE_NOT_FOUND (exit 0 ✓); (4) npm run build SUCCEEDED (exit 0, 'The build folder is ready to be deployed' message confirms BUILD OK ✓); (5) OVERRIDES WORKING CORRECTLY: root has ajv 8.20.0 + ajv-keywords 5.1.0, nested locations have ajv 6.15.0 (under react-scripts) + ajv-keywords 3.5.2 (under babel-loader) - dual-version strategy confirmed ✓; (6) yarn build in /app/frontend SUCCEEDED (exit 0, Done in 15.66s ✓); (7) Frontend service RUNNING (pid 942, uptime 0:41:22), webpack compiled successfully with only 1 minor eslint warning (react-hooks/exhaustive-deps) ✓. FIX CONFIRMED: The ajv ^8.17.1 devDependency + overrides strategy successfully resolves the Vercel 'Cannot find module ajv/dist/compile/codegen' error. Both npm (Vercel simulation) and yarn (local) builds succeed. No regression detected. Ready for Vercel deployment."
+
+# ============ Bug Fix 2: Vercel build "Cannot find module ajv/dist/compile/codegen" ============
+frontend:
+  - task: "Vercel craco build fails: ajv/dist/compile/codegen module not found"
+    implemented: true
+    working: true
+    file: "/app/frontend/package.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "After ERESOLVE fix, Vercel build progressed to 'npm run build' but failed: Error: Cannot find module 'ajv/dist/compile/codegen' via ajv-keywords -> schema-utils -> terser-webpack-plugin -> react-scripts. Node v24.19.0 on Vercel."
+        -working: "NA"
+        -agent: "main"
+        -comment: "Root cause (verified in npm sandbox): npm hoists ajv@6 to root (eslint@8 direct dep), but root ajv-keywords@5 (peer of schema-utils@4 from terser-webpack-plugin@5.3.x) needs ajv@8's dist/compile/codegen path; legacy-peer-deps skips peer installs so ajv@8 was nested under schema-utils only. Fix in package.json: devDependencies.ajv ^8.17.1 (root = v8), overrides nesting ajv@^6 for ajv-keywords@^3 and schema-utils@^3 consumers, engines.node 20.x (+ root /app/package.json engines for Vercel). Verified: fresh npm install + npm run build in sandbox = BUILD OK; yarn install + yarn build locally = OK (no yarn regression)."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ ALL VERIFICATION CHECKS PASSED (7/7). FRESH VERCEL BUILD SIMULATION: Created clean /tmp/verify-sim, copied package.json + .npmrc + craco.config.js + jsconfig.json + postcss.config.js + tailwind.config.js + src + public + plugins from /app/frontend. (1) npm install SUCCEEDED (exit 0, added 1491 packages in 45s); (2) Root node_modules/ajv is version 8.20.0 (8.x ✓); (3) node -e require ajv-keywords/dist/definitions/typeof.js did NOT throw MODULE_NOT_FOUND (exit 0 ✓); (4) npm run build SUCCEEDED (exit 0, 'The build folder is ready to be deployed' ✓); (5) OVERRIDES VERIFIED: root ajv 8.20.0 + ajv-keywords 5.1.0, nested ajv 6.15.0 under react-scripts + ajv-keywords 3.5.2 under babel-loader (correct dual-version strategy ✓); (6) yarn build in /app/frontend SUCCEEDED (exit 0, Done in 15.66s ✓); (7) Frontend service RUNNING (pid 942, uptime 0:41:22), webpack compiled with 1 warning (only minor eslint react-hooks/exhaustive-deps ✓). FIX CONFIRMED: The ajv ^8.17.1 devDependency + overrides strategy resolves the Vercel 'Cannot find module ajv/dist/compile/codegen' error. Both npm (Vercel) and yarn (local) builds succeed. No regression detected."
