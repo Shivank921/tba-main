@@ -404,3 +404,39 @@ agent_communication:
     -comment: "✅ BACKEND TESTING COMPLETE - ALL GALLERY TESTS PASSED (13/13). Gallery Management fully functional: (1) GET /api/gallery (PUBLIC) returns 200 with exactly 4 albums (puja, programs, activities, news-media) in correct order, each with 5 photos, proper structure (id/title/blurb/cover/cover_photo_id/photos), no _id exposed; (2) POST /api/gallery/albums/puja/photos requires JWT (401 without), accepts valid images (returns 201 with photo object, url starts with /api/uploads/), validates content-type (400 for non-images), enforces 15MB limit (400 for larger files); (3) GET /api/uploads/{filename} serves uploaded files publicly (200 with image bytes); (4) PATCH /api/gallery/albums/puja/cover sets cover photo correctly (200, updates cover and cover_photo_id in GET response); (5) PUT /api/gallery/albums/puja/order reorders photos (200), handles partial lists correctly (missing IDs appended); (6) DELETE /api/gallery/albums/puja/photos/{id} removes photo (200), deletes file from disk (404 on subsequent GET), cover falls back to first remaining photo when cover deleted; (7) Invalid album IDs return 404 for upload/delete/order/cover; (8) Invalid photo IDs return 404 for delete/cover. All validation, authentication, file handling, and edge cases working correctly. Puja album restored to original 5 seeded photos after cleanup."
     -agent: "testing"
     -comment: "✅ REGRESSION TEST COMPLETE - ALL TESTS PASSED (7/7). Verified after Vercel deployment prep changes: (1) GET /api/ health check working (200, Hello World); (2) GET /api/gallery returns 4 albums with 5 photos each (PUBLIC); (3) Admin login with admin/admin123 returns valid JWT; (4) Photo upload to programs album works (201), file written to /app/backend/uploads (NOT /tmp/uploads) - VERIFIED ON DISK; (5) Uploaded file served via GET /api/uploads/{filename} (200); (6) Photo delete works (200), file removed from /app/backend/uploads - VERIFIED ON DISK; (7) Programs album restored to 5 original seeded photos. CRITICAL: The try/except OSError change around UPLOAD_DIR.mkdir did NOT break local operation - files are correctly written to /app/backend/uploads locally. No regression detected. All backend functionality working as expected."
+# ============ Bug Fix: Vercel build ERESOLVE failure ============
+frontend:
+  - task: "Vercel build fails at npm install (ERESOLVE date-fns vs react-day-picker)"
+    implemented: true
+    working: true
+    file: "/app/frontend/.npmrc"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: false
+        -agent: "user"
+        -comment: "User reported Vercel deploy fails: 'npm error ERESOLVE unable to resolve dependency tree — peer date-fns@^2.28.0 || ^3.0.0 from react-day-picker@8.10.1' while root has date-fns@4.1.0. Root cause: frontend/yarn.lock was never committed to GitHub (untracked locally), so Vercel used npm instead of yarn; npm strictly enforces peer deps while yarn only warns."
+        -working: "NA"
+        -agent: "main"
+        -comment: "Fix: created /app/frontend/.npmrc with legacy-peer-deps=true so npm resolves the tree like yarn does. Verified via npm install --dry-run in a sandbox copy (exit 0). Also yarn.lock must be committed so Vercel auto-detects yarn."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ ALL VERIFICATION CHECKS PASSED (4/4). CAUSATION CHECK: Copied package.json alone to /tmp/test_without_npmrc, ran npm install --dry-run → FAILED with exact ERESOLVE error 'peer date-fns@^2.28.0 || ^3.0.0 from react-day-picker@8.10.1' (reproduces user's Vercel error). FIX CHECK: Copied package.json + .npmrc to /tmp/test_with_npmrc, ran npm install --dry-run → SUCCEEDED (exit 0, added 1486 packages, no ERESOLVE error). NO-REGRESSION CHECK: (1) Frontend service RUNNING (pid 942, uptime 0:21:23); (2) Frontend logs show 'webpack compiled with 1 warning' (compiling successfully); (3) /app/frontend/yarn.lock exists (537K, needed for Vercel to prefer yarn). BONUS: yarn build completed successfully in 17.48s with only minor eslint warning (react-hooks/exhaustive-deps). Fix verified - .npmrc with legacy-peer-deps=true resolves the Vercel npm install failure."
+
+metadata:
+  version: "1.6"
+  test_sequence: 7
+  run_ui: false
+
+test_plan:
+  current_focus: []
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    -agent: "main"
+    -comment: "User-reported Vercel build failure (ERESOLVE). Fix applied: /app/frontend/.npmrc with legacy-peer-deps=true. Please verify: (1) sandbox npm install --dry-run with package.json+.npmrc succeeds; (2) without .npmrc it fails with ERESOLVE (proving causation); (3) the running frontend still compiles after the change (check supervisor logs)."
+    -agent: "testing"
+    -comment: "✅ VERCEL BUILD FIX VERIFIED - ALL CHECKS PASSED (4/4). CAUSATION: npm install --dry-run WITHOUT .npmrc reproduces exact ERESOLVE error (date-fns@4.1.0 vs react-day-picker peer dep ^2.28.0 || ^3.0.0). FIX: npm install --dry-run WITH .npmrc succeeds (exit 0, 1486 packages). NO-REGRESSION: Frontend service RUNNING, webpack compiling successfully, yarn.lock exists (537K). BONUS: yarn build completes in 17.48s. The .npmrc fix is confirmed working - Vercel npm builds will now succeed with legacy-peer-deps=true."
