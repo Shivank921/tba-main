@@ -279,7 +279,21 @@ async def admin_stats(admin: dict = Depends(require_admin)):
 # another instance cannot see it at all — which left the gallery full of broken
 # images while the MongoDB photo records survived.
 GALLERY_BUCKET = 'gallery_files'
-gallery_files = AsyncIOMotorGridFSBucket(db, bucket_name=GALLERY_BUCKET)
+_gallery_files = None
+
+
+def _gallery_fs() -> AsyncIOMotorGridFSBucket:
+    """GridFS bucket holding the gallery photo bytes.
+
+    Built lazily on first use: motor resolves the event loop when a bucket is
+    constructed, so creating it at import time raises
+    "There is no current event loop" on serverless runtimes that import the app
+    outside a running loop.
+    """
+    global _gallery_files
+    if _gallery_files is None:
+        _gallery_files = AsyncIOMotorGridFSBucket(db, bucket_name=GALLERY_BUCKET)
+    return _gallery_files
 
 # Legacy on-disk upload location. Only read as a fallback for photos uploaded
 # before storage moved into MongoDB; nothing is written here any more.
@@ -358,7 +372,7 @@ def _photo(url: str, stored_file: Optional[str] = None) -> dict:
 
 async def _store_upload(name: str, data: bytes, content_type: str) -> None:
     """Persist photo bytes in MongoDB so they outlive the serverless instance."""
-    await gallery_files.upload_from_stream(
+    await _gallery_fs().upload_from_stream(
         name, data, metadata={'content_type': content_type}
     )
 
@@ -366,7 +380,7 @@ async def _store_upload(name: str, data: bytes, content_type: str) -> None:
 async def _open_upload(name: str):
     """GridFS stream for a stored photo, or None if the bytes are missing."""
     try:
-        return await gallery_files.open_download_stream_by_name(name)
+        return await _gallery_fs().open_download_stream_by_name(name)
     except Exception:  # gridfs.errors.NoFile
         return None
 
@@ -391,7 +405,7 @@ async def _delete_upload(name: str) -> None:
     """Remove a stored photo's bytes (GridFS plus any legacy disk copy)."""
     doc = await db[f'{GALLERY_BUCKET}.files'].find_one({'filename': name}, {'_id': 1})
     if doc:
-        await gallery_files.delete(doc['_id'])
+        await _gallery_fs().delete(doc['_id'])
     legacy = UPLOAD_DIR / name
     if legacy.is_file():
         legacy.unlink()
