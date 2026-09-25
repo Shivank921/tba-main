@@ -1,9 +1,9 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Response
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 import os
 import logging
 from pathlib import Path
@@ -273,15 +273,22 @@ async def admin_stats(admin: dict = Depends(require_admin)):
 # ============================================================
 # Gallery Management (Frames of Devotion)
 # ============================================================
+# Uploaded photos are stored in MongoDB (GridFS) rather than on disk.
+# Serverless filesystems are ephemeral and per-instance: a file written while
+# serving one request disappears on the next cold start, and a request served by
+# another instance cannot see it at all — which left the gallery full of broken
+# images while the MongoDB photo records survived.
+GALLERY_BUCKET = 'gallery_files'
+gallery_files = AsyncIOMotorGridFSBucket(db, bucket_name=GALLERY_BUCKET)
+
+# Legacy on-disk upload location. Only read as a fallback for photos uploaded
+# before storage moved into MongoDB; nothing is written here any more.
 UPLOAD_DIR = ROOT_DIR / 'uploads'
-try:
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-except OSError:
-    # Read-only filesystem (e.g. Vercel serverless) — use ephemeral /tmp storage
-    UPLOAD_DIR = Path('/tmp/uploads')
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'}
-MAX_UPLOAD_BYTES = 15 * 1024 * 1024  # 15 MB per photo
+# Vercel caps both the request and the response body of a Function at 4.5 MB,
+# and uploads arrive as multipart bodies, so keep photos comfortably below it.
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024  # 4 MB per photo
 
 GALLERY_SEED = [
     {
@@ -349,6 +356,47 @@ def _photo(url: str, stored_file: Optional[str] = None) -> dict:
     }
 
 
+async def _store_upload(name: str, data: bytes, content_type: str) -> None:
+    """Persist photo bytes in MongoDB so they outlive the serverless instance."""
+    await gallery_files.upload_from_stream(
+        name, data, metadata={'content_type': content_type}
+    )
+
+
+async def _open_upload(name: str):
+    """GridFS stream for a stored photo, or None if the bytes are missing."""
+    try:
+        return await gallery_files.open_download_stream_by_name(name)
+    except Exception:  # gridfs.errors.NoFile
+        return None
+
+
+async def _available_uploads(names: set) -> set:
+    """Subset of `names` whose bytes still exist (GridFS, or legacy disk)."""
+    if not names:
+        return set()
+    found = set()
+    cursor = db[f'{GALLERY_BUCKET}.files'].find(
+        {'filename': {'$in': list(names)}}, {'filename': 1}
+    )
+    async for doc in cursor:
+        found.add(doc['filename'])
+    for stale in names - found:
+        if (UPLOAD_DIR / stale).is_file():
+            found.add(stale)
+    return found
+
+
+async def _delete_upload(name: str) -> None:
+    """Remove a stored photo's bytes (GridFS plus any legacy disk copy)."""
+    doc = await db[f'{GALLERY_BUCKET}.files'].find_one({'filename': name}, {'_id': 1})
+    if doc:
+        await gallery_files.delete(doc['_id'])
+    legacy = UPLOAD_DIR / name
+    if legacy.is_file():
+        legacy.unlink()
+
+
 async def _get_album(album_id: str) -> dict:
     doc = await db.gallery_albums.find_one({'id': album_id}, {'_id': 0})
     if not doc:
@@ -362,17 +410,48 @@ async def list_gallery():
     albums = await db.gallery_albums.find({}, {'_id': 0}).to_list(100)
     order = {a: i for i, a in enumerate(GALLERY_ALBUM_ORDER)}
     albums.sort(key=lambda a: order.get(a['id'], 99))
+
+    # Hide uploaded photos whose bytes are gone (e.g. lost to the old ephemeral
+    # filesystem) so the public gallery never renders broken images.
+    stored = {p['file'] for a in albums for p in a.get('photos', []) if p.get('file')}
+    available = await _available_uploads(stored)
+    for a in albums:
+        photos = a.get('photos', [])
+        kept = [p for p in photos if not p.get('file') or p['file'] in available]
+        if len(kept) == len(photos):
+            continue
+        logger.warning(
+            "Album '%s': hiding %d photo(s) with missing upload bytes",
+            a['id'], len(photos) - len(kept),
+        )
+        a['photos'] = kept
+        if a.get('cover', '').startswith('/api/uploads/') and a['cover'] not in {p['url'] for p in kept}:
+            default = next((s['cover'] for s in GALLERY_SEED if s['id'] == a['id']), '')
+            a['cover'] = default or (kept[0]['url'] if kept else '')
+            a['cover_photo_id'] = None
     return albums
 
 
 @api_router.get('/uploads/{filename}')
 async def serve_upload(filename: str):
-    """Serve admin-uploaded gallery photos."""
+    """Serve admin-uploaded gallery photos from MongoDB (GridFS)."""
     safe = os.path.basename(filename)
+    stream = await _open_upload(safe)
+    if stream is not None:
+        data = await stream.read()
+        content_type = (stream.metadata or {}).get('content_type') or 'application/octet-stream'
+        return Response(
+            content=data,
+            media_type=content_type,
+            # Filenames are unique per upload, so the bytes never change.
+            headers={'Cache-Control': 'public, max-age=31536000, immutable'},
+        )
+
+    # Legacy photos uploaded before storage moved into MongoDB
     path = UPLOAD_DIR / safe
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail='File not found')
-    return FileResponse(path)
+    if path.is_file():
+        return FileResponse(path)
+    raise HTTPException(status_code=404, detail='File not found')
 
 
 @api_router.post('/gallery/albums/{album_id}/photos', status_code=201)
@@ -384,11 +463,14 @@ async def upload_gallery_photo(album_id: str, file: UploadFile = File(...), admi
 
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=400, detail='Photo exceeds the 15 MB limit')
+        raise HTTPException(
+            status_code=400,
+            detail='Photo exceeds the 4 MB limit — please resize it and try again',
+        )
 
     ext = os.path.splitext(file.filename or '')[1].lower() or '.jpg'
     stored = f'{album_id}-{uuid.uuid4().hex}{ext}'
-    (UPLOAD_DIR / stored).write_bytes(data)
+    await _store_upload(stored, data, file.content_type)
 
     photo = _photo(f'/api/uploads/{stored}', stored_file=stored)
     await db.gallery_albums.update_one({'id': album_id}, {'$push': {'photos': photo}})
@@ -415,11 +497,9 @@ async def delete_gallery_photo(album_id: str, photo_id: str, admin: dict = Depen
             {'id': album_id}, {'$set': {'cover': new_cover, 'cover_photo_id': remaining[0]['id'] if remaining else None}}
         )
 
-    # Delete the uploaded file from disk (legacy static photos have file=None)
+    # Delete the stored bytes (legacy static photos have file=None)
     if target.get('file'):
-        f = UPLOAD_DIR / target['file']
-        if f.is_file():
-            f.unlink()
+        await _delete_upload(target['file'])
     return {'ok': True, 'deleted': photo_id}
 
 

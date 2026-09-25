@@ -13,7 +13,8 @@ import { toast } from 'sonner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL || ''}/api`;
 const resolveSrc = (u) => (u && u.startsWith('/api/') ? `${process.env.REACT_APP_BACKEND_URL || ''}${u}` : u);
-const MAX_BYTES = 15 * 1024 * 1024;
+// Vercel rejects function bodies over 4.5 MB, so photos must stay below that.
+const MAX_BYTES = 4 * 1024 * 1024;
 
 const GalleryManager = ({ authHeader, onUnauthorized }) => {
   const [albums, setAlbums] = useState([]);
@@ -49,7 +50,7 @@ const GalleryManager = ({ authHeader, onUnauthorized }) => {
     if (!list.length || !album) return;
     for (const f of list) {
       if (f.size > MAX_BYTES) {
-        toast.error(`"${f.name}" is larger than 15 MB and was skipped.`);
+        toast.error(`"${f.name}" is larger than 4 MB and was skipped.`);
         continue;
       }
     }

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="The Bengali Association, Coimbatore">
+  <defs>
+    <path id="ogArcTop" d="M 388,268 A 212,212 0 0 1 812,268" />
+    <path id="ogArcBottom" d="M 385,268 A 215,215 0 0 0 815,268" />
+    <linearGradient id="ogGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a1810" />
+      <stop offset="0.55" stop-color="#1a0f0a" />
+      <stop offset="1" stop-color="#4a1410" />
+    </linearGradient>
+    <linearGradient id="ogGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f5c76a" />
+      <stop offset="1" stop-color="#c8862a" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#ogGrad)" />
+  <circle cx="600" cy="330" r="430" fill="none" stroke="#c8862a" stroke-opacity="0.14" stroke-width="2" />
+  <circle cx="600" cy="330" r="360" fill="none" stroke="#c8862a" stroke-opacity="0.10" stroke-width="2" />
+
+  <!-- Emblem -->
+  <g transform="translate(488,140) scale(0.46)">
+    <circle cx="256" cy="256" r="246" fill="#faf6ef" stroke="#000000" stroke-width="13" />
+    <circle cx="256" cy="256" r="194" fill="none" stroke="#000000" stroke-width="6" />
+    <text font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="42" letter-spacing="1" fill="#000000">
+      <textPath xlink:href="#ogArcTop" href="#ogArcTop" startOffset="50%" text-anchor="middle">THE BENGALI ASSOCIATION</textPath>
+    </text>
+    <text font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="0.5" fill="#000000">
+      <textPath xlink:href="#ogArcBottom" href="#ogArcBottom" startOffset="50%" text-anchor="middle">COIMBATORE</textPath>
+    </text>
+    <path d="M 256,156 L 384,366 L 128,366 Z" fill="none" stroke="#000000" stroke-width="7" stroke-linejoin="miter" />
+    <path d="M 256,170 L 371,359 L 141,359 Z" fill="none" stroke="#000000" stroke-width="3.5" stroke-linejoin="miter" />
+    <text x="205.3" y="268.7" transform="rotate(-60 205.3 268.7)" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="24" letter-spacing="1.5" fill="#000000">PEACE</text>
+    <text x="306.7" y="268.7" transform="rotate(60 306.7 268.7)" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="24" letter-spacing="1.5" fill="#000000">PRAYER</text>
+    <text x="256" y="250" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="58" fill="#000000">T</text>
+    <text x="256" y="302" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="44" fill="#000000">B</text>
+    <text x="256" y="350" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="44" fill="#000000">A</text>
+    <text x="256" y="398" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="3" fill="#000000">SERVICE</text>
+    <text x="256" y="430" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="19" letter-spacing="0.5" fill="#000000">REGD NO: 189/2002</text>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="600" y="470" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="72" fill="#fef6e4">The Bengali Association</text>
+  <text x="600" y="530" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="14" fill="url(#ogGold)">COIMBATORE</text>
+  <line x1="420" y1="562" x2="780" y2="562" stroke="#c8862a" stroke-opacity="0.55" stroke-width="2" />
+  <text x="600" y="594" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" letter-spacing="3" fill="#fef6e4" fill-opacity="0.75">PEACE · PRAYER · SERVICE · EST. 2002</text>
+</svg>
